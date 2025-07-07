@@ -283,9 +283,9 @@ class Player(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.sprite)
 
 
-    def draw(self, win):
+    def draw(self, win, offset_x):
        
-        win.blit(self.sprite, (self.rect.x, self.rect.y))
+        win.blit(self.sprite, (self.rect.x - offset_x, self.rect.y))
 
 
 
@@ -313,8 +313,8 @@ class Object(pygame.sprite.Sprite):
         #name of sprite
         self.name = name
     
-    def draw(self,win):
-        win.blit(self.image, (self.rect.x, self.rect.y))
+    def draw(self, win, offset_x) :
+        win.blit(self.image, (self.rect.x -offset_x, self.rect.y))
 
 
 #-------------------------------------------------
@@ -416,7 +416,8 @@ def get_background(name):
 
 #-------------------------------------------------
 #Drawing/Rendering all images (method)
-def draw(window, background, bg_image, player, objects): 
+#offset_x is for screen scrolling
+def draw(window, background, bg_image, player, objects, offset_x): 
 
     #Loop through all the tiles we have and drawing them
     for tile in background: 
@@ -426,10 +427,10 @@ def draw(window, background, bg_image, player, objects):
         window.blit(bg_image, tile)
     
     for obj in objects:
-        obj.draw(window)
+        obj.draw(window, offset_x)
 
     #drawing the player
-    player.draw(window)
+    player.draw(window, offset_x)
 
     #update the screen every second 
     pygame.display.update()
@@ -445,23 +446,25 @@ def main(window):
 
     clock = pygame.time.Clock()
 
-
+    #Getting Background
     background , bg_image = get_background("Blue.png")
-
 
     #Player Creation: See Class
     player = Player(100, 100, 50, 50)
 
-
     #Creating the Terrain
     block_size = 96
-
     #Some going to left and right
     #-WIDTH // block_size -> how many blocks to the left
     #i is it the x coordinate where to place the block 
     floor = [Block(i * block_size, HEIGHT - block_size, block_size) 
              for i in range(-WIDTH // block_size, (WIDTH *2) // block_size )]
-
+    
+    #For Screen Scrolling/See within run loop
+    offset_x = 0
+    #When the player gets 200 pixels to left or the right of the screen, the screen starts scrolling
+    scroll_area_width = 200
+    
 
     #This will act as our "event loop"
     run = True
@@ -491,7 +494,16 @@ def main(window):
         handle_move(player, floor)
 
         #Rendering 
-        draw(window, background, bg_image, player, floor)
+        draw(window, background, bg_image, player, floor , offset_x)
+
+        #Screen Scrolling
+        #Starting Scrolling when Player Starts getting to the edge / boundary
+        #Checking if moving to the right
+        if (player.rect.right - offset_x >= WIDTH - scroll_area_width and player.x_vel >0) or (
+                (player.rect.left - offset_x <= scroll_area_width) and player.x_vel <0):
+            offset_x += player.x_vel
+
+
 
     #Closes the Game
     pygame.quit()
