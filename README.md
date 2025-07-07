@@ -1,16 +1,30 @@
-#Python Summer Camp: Pygame (Platformer)
+# Python Summer Camp: Pygame (Platformer)
 
-#Information
-- Still Updating the Read me
-  
-#Pygame
+# Overview
+
+This is a basic platfomer game intended to teach K-12 students the fundamentals of python in a unique and fun manner. 
+
+# Information 
+- Still Updating the Read ME
+- Code Comments are included to understand the basics of code
+
+# To Do
+- Modularize the Code
+- Test on trinket 
+
+# Pygame
 Click on link to and follow directions to have dependcies installed
 
 https://www.pygame.org/wiki/GettingStarted 
 
-#Python Version 
+# Python Version 
 Recommended to run the latest version. 
 
-I used 3.13.5 
+3.13.5 ver was used for this 
 
-#Open your choice of Visiual Studio Code
+# IDE (Integrated Development Enviroment) 
+
+Intended for Trinket, however you can use your choice such as:
+- Visual Studio Code
+- Cursor
+- Etc.
