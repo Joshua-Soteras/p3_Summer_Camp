@@ -12,7 +12,6 @@ This is a basic platfomer game intended to teach K-12 students the fundamentals 
 - Modularize the Code (Josh: I'll see what I can do with this)
 - Test on trinket
 - Lesson Plan Ideas
-- Finish other objects in game (Josh I'll finish this)
 
 ## Pygame
 Click on link to and follow directions to have dependcies installed
