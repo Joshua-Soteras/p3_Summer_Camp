@@ -140,7 +140,7 @@ class Player(pygame.sprite.Sprite):
         self.x_vel = 0
         self.y_vel = 0 
 
-        #
+        #For Pixels of the Character and use for Collision
         self.mask = None
 
         #Animations for direction
@@ -151,9 +151,12 @@ class Player(pygame.sprite.Sprite):
 
         #Tells us how long we've been falling
         self.fall_count = 0 
-
         #Jumping
         self.jump_count = 0
+
+        #Character Getting Hit
+        self.hit = False
+        self.hit_count = 0 
 
     
     #Jumping Method
@@ -168,6 +171,10 @@ class Player(pygame.sprite.Sprite):
         #Only for the first jump
         if self.jump_count == 1:
             self.fall_count == 0 
+
+    def make_hit(self):
+        self.hit = True
+        self.hit_count = 0 
 
             
     #Moving Function
@@ -216,11 +223,19 @@ class Player(pygame.sprite.Sprite):
         #Updating the velocity of the character
         self.move(self.x_vel, self.y_vel)
 
+        #Registering Hits and Animation
+        if self.hit:
+            self.hit_count += 1
+        if self.hit_count > fps * 2:
+            self.hit = False
+            self.hit_count = 0
+
         #Updating Fall Time
         #NoteL once this is 60 -> 60 /fps = 60/60 = 1 sec of fall time
         self.fall_count += 1
         self.update_sprite()
     
+
     #Collision
     def landed(self):
         #reset the falling/ adding gravity.
@@ -229,6 +244,7 @@ class Player(pygame.sprite.Sprite):
         self.y_vel = 0 
         #for doubling jumping
         self.jump_count = 0
+
 
     #Collision
     def hit_head(self):
@@ -243,8 +259,12 @@ class Player(pygame.sprite.Sprite):
         #Default animation
         sprite_sheet = "idle"
 
+        #Getting Hit
+        if self.hit:
+            sprite_sheet = "hit"
+
         #Jumping Animation: Single and Double Jump
-        if self.y_vel < 0:
+        elif self.y_vel < 0:
             if self.jump_count == 1:
                 sprite_sheet = "jump"
             elif self.jump_count == 2:
@@ -335,7 +355,53 @@ class Block(Object):
 
         self.mask = pygame.mask.from_surface(self.image)
 
-    
+
+class Fire(Object):
+
+    ANIMATION_DELAY = 3
+
+    def __init__(self, x, y, width, height):
+
+        #Name is fire, we can determine if we collide with it
+        super().__init__( x, y, width, height, "fire")
+
+        self.fire = load_sprite_sheets("Traps", "Fire", width, height)
+        self.image = self.fire["off"][0]
+        self.mask = pygame.mask.from_surface(self.image)
+        self.animation_count = 0
+        self.animation_name = "off"
+
+    def on(self):
+        self.animation_name = "on"
+
+    def off(self):
+        self.animation_name = "off"
+
+    def loop(self):
+       
+        #Animation anme is either on or off
+        sprites = self.fire[self.animation_name]
+        
+        #Every animtiondelay value frames we want to show a slight lag for animations
+        #If we have 5 (animation delay) sprites and we are on count 10, we are showing the 2nd animation
+        sprite_index = (self.animation_count // self.ANIMATION_DELAY) % len(sprites)
+        #Select the sprite animation we have available
+        self.image = sprites[sprite_index]
+        self.animation_count +=1
+
+        #sconstantly adjust the rectangle to what the rectangle we have already
+        self.rect = self.image.get_rect(topleft=(self.rect.x, self.rect.y))
+        
+        #mask is a mapping of all the pixels that exist within the sprite
+        #pixel perfect pixel image/ collides where there are pixels
+        #this is better than rectangluar collision : looks like we are hitting without touching
+        self.mask = pygame.mask.from_surface(self.image)
+
+        #Adjusting Animation Count: Don't want it to become a big numnber since the fire is static
+        if self.animation_count // self.ANIMATION_DELAY > len(sprites):
+            self.animation_count = 0
+
+
 
 #-------------------------------------------------
 #MOVING and COLLISION : Handling player inputs and collision
@@ -348,15 +414,25 @@ def handle_move(player , objects):
     #becomes zero if not moving 
     player.x_vel = 0
 
+    #Horizonzantal Collision
+    collide_left = collide(player, objects, -PLAYER_VEL * 2)
+    collide_right = collide(player, objects, -PLAYER_VEL * 2)
+
     #Tells if the key is pressed
-    if keys[pygame.K_LEFT]:
+    if keys[pygame.K_LEFT] and not collide_left:
         player.move_left(PLAYER_VEL)
     
-    if keys[pygame.K_RIGHT]:
+    if keys[pygame.K_RIGHT] and not collide_right:
         player.move_right(PLAYER_VEL)
     
-    hande_vertical_collision(player, objects, player.y_vel)
+    vertical_collide = hande_vertical_collision(player, objects, player.y_vel)
+    #All the objects we collided with
+    to_check = [collide_left, collide_right, *vertical_collide]
 
+    #If anything of them is fire we say we got hit by the fire
+    for obj in to_check:
+        if obj and obj.name == "fire":
+            player.make_hit()
 
 def hande_vertical_collision(player, objects, dy):
 
@@ -373,12 +449,36 @@ def hande_vertical_collision(player, objects, dy):
                 player.rect.bottom = obj.rect.top
                 player.landed()
 
-            #Moving up
+            #Moving up / Colliding witha cieling or upper object
             elif dy < 0 : 
                 player.rect.top = obj.rect.bottom
                 player.hit_head()
         
-        collided_objects.append(obj)
+            collided_objects.append(obj)
+
+    return collided_objects
+
+
+def collide(player, objects, dx):
+
+    #Checking if player were to move to the right/left would they hit an object
+    player.move(dx,0)
+
+    #Update the Rectangle and maskbefore we check collision
+    player.update()
+
+    #Then we check if our rectangle/mask is colliding with an object(s)
+    collided_objects = None
+    for obj in objects:
+        if pygame.sprite.collide_mask(player, obj):
+            collided_objects = obj
+            break
+
+    #Move the player back where they are originally 
+    player.move(-dx, 0)
+
+    #Update Mask/Rectangle Again
+    player.update()
 
     return collided_objects
 
@@ -460,6 +560,19 @@ def main(window):
     floor = [Block(i * block_size, HEIGHT - block_size, block_size) 
              for i in range(-WIDTH // block_size, (WIDTH *2) // block_size )]
     
+
+    #Creating Fire
+    fire = Fire(100, HEIGHT - block_size -64, 16, 32)
+    fire.on()
+
+    #*floor grabs all individual floor elements
+    #Basically doing what is above with floor
+    #block(0, HEIGHT - block_size * 2, y axis
+    objects = [*floor, Block(0, HEIGHT - block_size * 2, block_size),
+               Block(block_size * 3, HEIGHT - block_size * 4, block_size),
+               fire]
+
+
     #For Screen Scrolling/See within run loop
     offset_x = 0
     #When the player gets 200 pixels to left or the right of the screen, the screen starts scrolling
@@ -489,12 +602,13 @@ def main(window):
         #Updates of the players movement
         #Loop moves the character depending on the x and  vel set 
         player.loop(FPS)
+        fire.loop() #Updates Fire Animation
 
         #Handling Player Inputs + Collision of player
-        handle_move(player, floor)
+        handle_move(player, objects)
 
         #Rendering 
-        draw(window, background, bg_image, player, floor , offset_x)
+        draw(window, background, bg_image, player, objects, offset_x)
 
         #Screen Scrolling
         #Starting Scrolling when Player Starts getting to the edge / boundary
