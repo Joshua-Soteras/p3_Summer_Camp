@@ -9,7 +9,6 @@ This is a basic platfomer game intended to teach K-12 students the fundamentals 
 - Code Comments are included to understand the basics of code
 
 ## To Do
-- Modularize the Code (Josh: I'll see what I can do with this)
 - Test on trinket
 - Lesson Plan Ideas
 
